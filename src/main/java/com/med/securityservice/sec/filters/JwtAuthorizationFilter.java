@@ -21,30 +21,34 @@ import java.util.Collection;
 public class JwtAuthorizationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String authorizationToken=request.getHeader("Authorization");
-        if(authorizationToken!=null && authorizationToken.startsWith("Bearer ")){
-            try {
-                String jwt=authorizationToken.substring(7);
-                Algorithm algorithm=Algorithm.HMAC256("mySecret1234");
-                JWTVerifier jwtVerifier= JWT.require(algorithm).build();
-                DecodedJWT decodedJWT = jwtVerifier.verify(jwt);
-                String username=decodedJWT.getSubject();
-                String[] roles=decodedJWT.getClaim("roles").asArray(String.class);
-                Collection<GrantedAuthority> authorities = new ArrayList<>();
-                for(String r:roles){
-                    authorities.add(new SimpleGrantedAuthority(r));
-                }
-                UsernamePasswordAuthenticationToken authenticationToken=
-                        new UsernamePasswordAuthenticationToken(username,null,authorities);
-                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-                filterChain.doFilter(request,response);
-            }catch (Exception e){
-                response.setHeader("error-message",e.getMessage());
-                response.sendError(HttpServletResponse.SC_FORBIDDEN);
-            }
-
-        }else {
+        if(request.getServletPath().equals("/refreshToken")){
             filterChain.doFilter(request,response);
+        }else {
+            String authorizationToken = request.getHeader("Authorization");
+            if (authorizationToken != null && authorizationToken.startsWith("Bearer ")) {
+                try {
+                    String jwt = authorizationToken.substring(7);
+                    Algorithm algorithm = Algorithm.HMAC256("mySecret1234");
+                    JWTVerifier jwtVerifier = JWT.require(algorithm).build();
+                    DecodedJWT decodedJWT = jwtVerifier.verify(jwt);
+                    String username = decodedJWT.getSubject();
+                    String[] roles = decodedJWT.getClaim("roles").asArray(String.class);
+                    Collection<GrantedAuthority> authorities = new ArrayList<>();
+                    for (String r : roles) {
+                        authorities.add(new SimpleGrantedAuthority(r));
+                    }
+                    UsernamePasswordAuthenticationToken authenticationToken =
+                            new UsernamePasswordAuthenticationToken(username, null, authorities);
+                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                    filterChain.doFilter(request, response);
+                } catch (Exception e) {
+                    response.setHeader("error-message", e.getMessage());
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN);
+                }
+
+            } else {
+                filterChain.doFilter(request, response);
+            }
         }
     }
 }
